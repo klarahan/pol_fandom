@@ -1,0 +1,407 @@
+---
+title: "fandom"
+author: "Oul Han"
+date: "20 September 2018"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("C:/Users/hanoul/Dropbox/Public/fandom")
+```
+
+## Load tokens
+
+```{r cars, echo=TRUE}
+library(quanteda)
+tmp <- readRDS("corp_tweets_ko.RDS")
+the_corpus <- corpus(tmp)
+```
+
+## Select political content
+### 1.create dictionary via keyness (political keywords from corpus tokens)
+```{r}
+library(LSS)
+ko_tweet_toks <- readRDS("ko_tweet_toks.RDS")
+ko_tweet_toks <- tokens_remove(ko_tweet_toks, "@*" , min_nchar = 2)
+dict_pols <- head(char_keyness(ko_tweet_toks, '*문재인*|*북한*|*김정일*|*종전*|
+                               *남북정상회담*|*김정은*'), 50)
+print(dict_pols)
+```
+### 2.use dictionary to subset corpus (politics corpus)
+### 3.find hashtags in subset corpus (political hashtags)
+```{r}
+pols_corpus <- corpus_segment(the_corpus, pattern = dict_pols)
+pols_dfm <- dfm(pols_corpus)
+pols_tag_dfm <- dfm_select(pols_dfm, ('#*')) 
+toptag_pols <- names(topfeatures(pols_tag_dfm, 50))
+head(toptag_pols, 50)
+```
+
+### 4.create Feature co-occurrence matrix and plot network (political hashtags)
+```{r}
+pols_tag_fcm <- fcm(pols_tag_dfm)
+pols_tag_fcm <- fcm_remove(pols_tag_fcm, "#")
+head(pols_tag_fcm)
+```
+```{r}
+top_pols_fcm <- fcm_select(pols_tag_fcm, toptag_pols)
+textplot_network(top_pols_fcm)
+```
+
+### 1.create dictionary via keyness (negative keywords from corpus tokens)
+```{r}
+dict_neg <- head(char_keyness(ko_tweet_toks, '*논란*|*악플*|*비난*|*최악*'), 100)
+print(dict_neg)
+```
+
+### 2.use dictionary to subset corpus (negative corpus)
+```{r} 
+neg_corpus <- corpus_segment(the_corpus, pattern = dict_neg)
+neg_dfm <- dfm(neg_corpus)
+neg_tag_dfm <- dfm_select(neg_dfm, ('#*'))
+toptag_neg <- names(topfeatures(neg_tag_dfm, 50))
+head(toptag_neg, 50)
+```
+
+### 3.find content in subset corpus (political FROM negative corpus)
+```{r}
+neg_pols_dfm <- dfm_select(neg_dfm, pattern = dict_pols)
+top_neg_pols <- names(topfeatures(neg_pols_dfm, 50))
+head(top_neg_pols, 50)
+```
+
+### 4.create Feature co-occurrence matrix and plot network (political-positive semantics)
+```{r}
+neg_pols_fcm <- fcm(neg_pols_dfm)
+neg_pols_fcm <- fcm_remove(neg_pols_fcm, "ㅠ*|ㅜ*|ㅋ*")
+head(neg_pols_fcm)
+```
+
+### result: sources of or shields against negativity? 
+```{r}
+neg_pols_fcm <- fcm_select(neg_pols_fcm, top_neg_pols)
+textplot_network(neg_pols_fcm)
+```
+
+## political content FROM prez dfm
+### 1.create dictionary via keyness (president keywords from corpus tokens)
+```{r}
+dict_prez <- head(char_keyness(ko_tweet_toks, '*문재인*|*대통령*'), 100)
+dict_prez <- gsub('*ㅋ*', "", dict_prez)
+dict_prez <- dict_prez[dict_prez != ""]
+print(dict_prez)
+```
+### 2.use dictionary to subset corpus (president corpus)
+```{r}
+prez_corpus <- corpus_segment(the_corpus, pattern = dict_prez)
+prez_dfm <- dfm(prez_corpus)
+prez_tag_dfm <- dfm_select(prez_dfm, ('#*'))
+top_prez <- names(topfeatures(prez_tag_dfm, 50))
+head(top_prez, 50)
+```
+### 3.find content in subset corpus (political FROM president corpus)
+```{r}
+prez_pols_dfm <- dfm_select(prez_dfm, pattern = dict_pols)
+top_prez_pols <- names(topfeatures(prez_pols_dfm, 50))
+head(top_prez_pols, 50)
+```
+### 4.create and plot Feature co-occurrence matrix (politics-president semantics)
+```{r}
+prez_pols_fcm <- fcm(prez_pols_dfm)
+head(prez_pols_fcm)
+```
+### result: clusters of polar meanings
+```{r}
+prez_pols_fcm <- fcm_select(prez_pols_fcm, top_prez_pols)
+textplot_network(prez_pols_fcm, alpha = 0.3)
+```
+
+## Select positive content
+### 1.create dictionary via keyness (positive keywords from corpus tokens)
+```{r}
+dict_pos <- head(char_keyness(ko_tweet_toks, '*반갑*|*성공*|*영광*|*최고*|*감격*'), 100)
+print(dict_pos)
+```
+
+### 2.use dictionary to subset corpus (positive corpus)
+```{r} 
+pos_corpus <- corpus_segment(the_corpus, pattern = dict_pos)
+pos_dfm <- dfm(pos_corpus)
+pos_tag_dfm <- dfm_select(pos_dfm, ('#*'))
+toptag_pos <- names(topfeatures(pos_tag_dfm, 50))
+head(toptag_pos, 50)
+```
+
+### 3.find content in subset corpus (political FROM positive corpus)
+```{r}
+pos_pols_dfm <- dfm_select(pos_dfm, pattern = dict_pols)
+top_pos_pols <- names(topfeatures(pos_pols_dfm, 50))
+head(top_pos_pols, 50)
+```
+
+### 4.create and plot Feature co-occurrence matrix (politics-positive semantics)
+```{r}
+pos_pols_fcm <- fcm(pos_pols_dfm)
+pos_pols_fcm <- fcm_remove(pos_pols_fcm, "ㅠ*|ㅜ*|ㅋ*")
+head(pos_pols_fcm)
+```
+
+### result: fandom prose or positive framing? 
+```{r}
+pos_pols_fcm <- fcm_select(pos_pols_fcm, top_pos_pols)
+textplot_network(pos_pols_fcm)
+```
+
+## add field to subset corpora 
+```{r}
+require(lsa)
+docvars(neg_corpus, field = "domain") <- "negative"   
+docvars(pos_corpus, field = "domain") <- "positive"
+docvars(pols_corpus, field = "domain") <- "politics"
+docvars(prez_corpus, field = "domain") <- "president"   
+```
+
+## add kpop corpus 
+```{r}
+dict_kpop <- head(char_keyness(ko_tweet_toks, '*세븐틴*|*방탄소년단*|*워너원*|
+                               *강다니엘*|*찬열*|*백현*|*빅스*'), 50)
+kpop_corpus <- corpus_segment(the_corpus, pattern = dict_kpop)
+docvars(kpop_corpus, "domain") <- "kpop" 
+```
+
+## combine corpora
+```{r}
+domain_corpus <- neg_corpus + pos_corpus + pols_corpus + prez_corpus + kpop_corpus
+names(docvars(domain_corpus)) 
+```
+
+## combine dicts 
+```{r}
+ult_dict <- dictionary(list(kpop = dict_kpop,
+                            politics = dict_pols,
+                            negative = dict_neg,
+                            positive = dict_pos,
+                            president = dict_prez))
+head(ult_dict)
+```
+
+```{r}
+domain_corpus %>%
+  corpus_subset(domain %in%
+                  c("president", "kpop")) %>%
+  dfm(groups = "domain", remove_punct = TRUE, remove_url = TRUE,
+      remove = c('rt', '#*', '@*', '*ㅋ*')) %>%
+  dfm_remove(min_nchar = 2) %>%
+  textstat_keyness(target = "kpop") %>%
+  textplot_keyness()
+```
+
+```{r}
+domain_corpus %>%
+  corpus_subset(domain %in%
+                  c("president", "politics")) %>%
+  dfm(groups = "domain", remove_punct = TRUE, remove_url = TRUE,
+      remove = c('rt', '#*', '@*', '*ㅋ*')) %>%
+  dfm_remove(min_nchar = 2) %>%
+  textstat_keyness(target = "politics") %>%
+  textplot_keyness()
+```
+
+```{r}
+domain_corpus %>%
+  corpus_subset(domain %in%
+                  c("president", "negative")) %>%
+  dfm(groups = "domain", remove_punct = TRUE, remove_url = TRUE,
+      remove = c('rt', '#*', '@*', '*ㅋ*')) %>%
+  dfm_remove(min_nchar = 2) %>%
+  textstat_keyness(target = "negative") %>%
+  textplot_keyness()
+```
+
+```{r}
+corpus_dfm <- dfm(domain_corpus, remove_punct = TRUE, remove_url = TRUE,
+                  remove = c('*.tt', '*.uk', '*.com', 'rt', '#*', '@*', '*ㅋ*'))
+corpus_dfm <- dfm_remove(corpus_dfm, min_nchar = 2)
+look_corpus <- dfm_lookup(corpus_dfm, dictionary = ult_dict, exclusive = TRUE)
+topfeatures(look_corpus)
+```
+
+```{r}
+domain_dfm <- dfm_group(look_corpus, groups = "domain")
+domain_ca <- textmodel_ca(domain_dfm, sparse = TRUE)
+textplot_scale1d(domain_ca)
+```
+ 
+## LSA trial: still sceptical
+```{r}
+feats <- dfm(ko_tweet_toks, verbose = TRUE) %>% 
+    dfm_trim(min_termfreq = 5) %>%
+    featnames()
+```
+
+```{r}
+lsa_toks <- tokens_select(ko_tweet_toks, feats, padding = TRUE)
+```
+
+```{r}
+lsa_fcm <- fcm(lsa_toks, context = "window", count = "weighted", weights = 1 / (1:5), tri = TRUE)
+```
+
+```{r}
+library(text2vec)
+glove <- GlobalVectors$new(word_vectors_size = 50, vocabulary = featnames(lsa_fcm), x_max = 10)
+lsa_main <- fit_transform(lsa_fcm, glove, n_iter = 20)
+```
+
+```{r}
+lsa_context <- glove$components
+dim(lsa_context)
+```
+
+```{r}
+lsa_vectors <- lsa_main + t(lsa_context)
+```
+
+```{r}
+pol_fandom_pos <-  lsa_vectors["문재인", ] - 
+    lsa_vectors["북한", ] + 
+    lsa_vectors["아이돌", ]
+
+# calculate the similarity
+fandom_pos_vector_dfm <- as.dfm(rbind(lsa_vectors, pol_fandom_pos))
+cos_sim <-  textstat_simil(fandom_pos_vector_dfm, "pol_fandom_pos", 
+                           margin = "documents", method = "cosine")
+head(sort(cos_sim[,1], decreasing = TRUE), 5)
+```
+
+```{r}
+pol_fandom_neg <-  lsa_vectors["문재인", ] - 
+    lsa_vectors["비핵화", ] + 
+    lsa_vectors["김정은", ]
+
+# calculate the similarity
+fandom_neg_vector_dfm <- as.dfm(rbind(lsa_vectors, pol_fandom_neg))
+cos_sim <-  textstat_simil(fandom_neg_vector_dfm, "pol_fandom_neg", 
+                           margin = "documents", method = "cosine")
+head(sort(cos_sim[,1], decreasing = TRUE), 5)
+```
+## https://rpubs.com/wsevier/LDA 
+```{r include=FALSE}
+library(topicmodels) #topic modeling functions
+library(stringr) #common string functions
+library(tidytext) #tidy text analysis
+library(tidyverse) #data manipulation and visualization
+library(scales) #used for percent scale on confusion table
+```
+
+```{r}
+domain_dtm <-  convert(domain_dfm, to = "topicmodels") 
+str(domain_dtm)
+```
+
+```{r}
+domain_lda <- LDA(domain_dtm, k = 5, control = list(seed = 1234))
+domain_topics <- tidy(domain_lda, matrix = "beta")
+top_n(domain_topics, 10)
+```
+
+## beta: construction of topics from words (how frequent they are in each topic)
+```{r}
+top_terms <- domain_topics %>%
+  group_by(topic) %>%
+  top_n(5, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+
+top_terms %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip()
+```
+
+## gamma: per-document-per-topic probability (how much each document is associated with each topic)
+```{r}
+domain_gamma <- tidy(domain_lda, matrix = "gamma")
+domain_gamma <- domain_gamma %>%
+  separate(document, c("domain", "y"), sep = "_", convert = TRUE)
+top_n(domain_gamma, 10)
+```
+
+```{r}
+domain_gamma %>%
+  mutate(domain = reorder(domain, gamma * topic)) %>%
+  ggplot(aes(factor(topic), gamma)) +
+  geom_boxplot() +
+  facet_wrap(~ domain)
+```
+
+```{r}
+domain_classifications <- domain_gamma %>%
+  group_by(domain) %>%
+  top_n(1, gamma) %>%
+  ungroup()
+
+domain_topics <- domain_classifications %>%
+  count(domain, topic) %>%
+  group_by(domain) %>%
+  top_n(1, n) %>%
+  ungroup() %>%
+  transmute(consensus = domain, topic)
+
+domain_classifications %>%
+  inner_join(domain_topics, by = "topic") %>%
+  filter(domain != consensus) 
+```
+
+```{r}
+assignments <- augment(domain_lda, data = domain_dtm)
+top_n(assignments, 10)
+```
+
+```{r}
+assignments <- assignments %>%
+  separate(document, "domain", sep = "_", convert = TRUE) %>%
+  inner_join(domain_topics, by = c(".topic" = "topic"))
+
+assignments
+```
+## confusion table
+```{r}
+assignments %>%
+  count(domain, consensus, wt = count) %>%
+  group_by(domain) %>%
+  mutate(percent = n / sum(n)) %>%
+  ggplot(aes(consensus, domain, fill = percent)) +
+  geom_tile() +
+  scale_fill_gradient2(high = "red", label = percent_format()) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        panel.grid = element_blank()) +
+  labs(x = "Domain words were assigned to",
+       y = "Domain words came from",
+       fill = "% of assignments")
+```
+
+```{r}
+wrong_words <- assignments %>%
+  filter(domain != consensus)
+
+wrong_words %>%
+  count(domain, consensus, term, wt = count) %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  top_n(10)
+```
+
+```{r}
+head(prez_kwic <- kwic(the_corpus, "*문재인*", window = 5))
+```
+
+
